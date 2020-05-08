@@ -1,0 +1,239 @@
+<link rel="import" href="../../polymer/polymer-element.html">
+<link rel="import" href="../../polymer/lib/elements/dom-repeat.html">
+<link rel="import" href="../../polymer/lib/elements/dom-if.html">
+<dom-module id="cells-pagination"> 
+    <template> 
+        <style>
+            :host{
+                --borderRadius: var(--borderRadius 0.5em);
+                --paginationBoxShadow:  0 1px 1px rgba(16, 27, 30, 0.07), 0 2px 2px rgba(16, 27, 30, 0.07), 0 4px 4px rgba(16, 27, 30, 0.05), 0 8px 8px rgba(16, 27, 30, 0.07), 0 16px 16px rgba(16, 27, 30, 0.07);
+                --boxShadow: var(--boxShadow), var(--paginationBoxShadow));
+                text-align: center;
+                display: block;
+                padding-bottom: 2rem;
+            }
+
+            :host *{
+                box-sizing: border-box;
+            }
+
+            .pagination{
+               display: inline-flex;
+                width: auto;
+                margin: 0 auto;
+                box-shadow: var(--boxShadow);
+                border-radius: calc(var(--borderRadius) * 1.5);
+
+            }
+
+            .pagination-item {
+                text-decoration: none;
+                padding: 0.75rem 1rem;
+                align-items: center;
+                justify-content: center;
+                display: flex;               
+                border-style: solid;
+                border-width: 0; 
+                color:  hsl(210, 50%, 60%);
+                border-color: hsl(210, 10%, 90%);
+                border-right-width: 1px;
+                background: white;
+                min-width: 1em; 
+                user-select: none;
+                cursor: pointer; 
+                -webkit-appearance: none; 
+                -moz-appearance: none;
+                appearance: none; 
+                position: relative;
+                margin: 0; 
+                transition: background-color 0.2s; 
+
+             }
+             .pagination-item:before{
+                content: attr(value);
+             }
+             .pagination-item:focus{
+                outline: none;
+             }
+             .pagination-item:hover{
+                background-color: whitesmoke;
+             }
+            
+             .pagination-item:disabled{
+                background-color: #e8e8e8;
+                color: hsl(210, 2%, 75%);
+                border-color:  hsl(210, 30%, 90%);
+                pointer-events: none;
+                cursor: default; 
+             }
+
+             .pagination-item--page:disabled{
+                background-color: hsl(210, 70%, 50%);
+                color:white;
+             }
+
+
+            .pagination-item:first-child{
+               border-top-left-radius: calc(var(--borderRadius) * 1.5);
+               border-bottom-left-radius: calc(var(--borderRadius) * 1.5);
+               padding-left: 1.25rem;
+            }
+
+            .pagination-item:last-child{
+               border-top-right-radius: calc(var(--borderRadius) * 1.5);
+               border-bottom-right-radius: calc(var(--borderRadius) * 1.5);
+               padding-right: 1.25rem;
+            }
+
+            .pagination-item:last-child{
+               border-right-width: 0;
+            }
+
+
+        </style>
+
+
+         <template is="dom-if" if="{{_hasPages}}">
+            <nav class="pagination">
+                <input class="pagination-item" type="button" on-click="_prevPage" value="Previous" disabled$="[[_isFirstPage]]">
+                <template is="dom-repeat" items="{{_pageButtons}}">
+                    <input class="pagination-item pagination-item--page" type="button" on-click="order" disabled$="[[item.disabled]]" data-item$="[[item.index]]" value="[[item.name]]">
+                </template>
+                <input class="pagination-item" type="button" on-click="_nextPage" value="Next" disabled$="[[_isLastPage]]">
+            </nav>             
+        </template>      
+        
+    </template>
+
+    <script> 
+        class CellsPagination extends Polymer.Element {
+            static get is() {
+                return "cells-pagination";
+            }
+            static get properties() {
+                return {
+
+                    numitems:{
+                        type: Number,
+                        value: 0,
+                        notify: true
+                    },
+                    _pageButtons: {
+                        type:Array,
+                        notify: true
+                    },
+                    _numPages:{
+                        type:Number,
+                        notify: true
+                    },
+                    _selectedIndex: {
+                        type:Number,
+                        value: 0,
+                        notify: true
+                        
+                       
+                    },
+                    _initialIndex: Number,
+                    _hasPages: Boolean,
+                    _isFirstPage: {
+                        type:Boolean,
+                        notify: true,
+                        computed:'_getFirstPage(_selectedIndex)'
+                    },
+                    _isLastPage: {
+                        type:Boolean,
+                        notify: true,
+                        computed:'_getLastPage(_selectedIndex)'
+                    }
+                };
+            }
+            constructor() {
+                super();
+                this._pageButtons = [];
+                this._hasPages= false;
+                this._initialIndex = 0;               
+                this._numPages = 0;
+            }
+
+            static get observers() {
+                return [
+                    '_updateNumItems(numitems, _selectedIndex)'
+                ]
+            }
+
+            _getFirstPage(index){
+                return index == 0;
+            }
+
+             _getLastPage(index){                
+                return index == this._numPages - 1;
+            }
+
+
+            _setPageButtons(selIndex){
+               
+                this._pageButtons = [...Array(this._numPages)].map((elem, index) =>{
+                       return {
+                        name: index+1,
+                        index: index,
+                        disabled: false                      
+                      };
+                    });
+               this._pageButtons[selIndex].disabled = true;
+               this._eventDispatcher(selIndex);
+            }
+
+            
+
+            _updateNumItems(numitems, index) {                
+                this._hasPages = numitems > 10;
+                if(numitems === 0) {
+                   return;
+                }
+                if(this._hasPages ){
+                    this._numPages = Math.ceil(numitems*0.1);
+                    this._setPageButtons(index);  
+                } else {
+                    this._eventDispatcher(0);
+                }
+                      
+            }
+
+             _eventDispatcher(index) {
+               this.dispatchEvent(new CustomEvent('pagination-event', {
+                  detail: {index},
+                  bubbles: true,
+                  composed: true
+                }));
+              }
+
+              _prevPage(event) {
+                if (this._selectedIndex > 0) {
+                    const index = this._selectedIndex - 1;
+                    this._selectedIndex = index;
+                  
+                }
+
+              }
+              _nextPage(event) {
+                if (this._selectedIndex < this._numPages - 1) {
+                    const index = this._selectedIndex + 1;
+                    this._selectedIndex = index;
+                  
+                }
+
+              }
+
+
+            order(event){
+                this._selectedIndex = Number(event.target.dataset.item);
+               
+
+            }
+
+          
+        }
+
+    customElements.define(CellsPagination.is, CellsPagination);
+    </script>
+</dom-module> 
